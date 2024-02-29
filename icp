@@ -1,0 +1,66 @@
+// Define a node record representing a participant in the consensus process
+type Node = {
+    id : Nat;
+    value : Nat;
+    isReady : Bool;
+};
+
+// Define a consensus system actor
+actor ConsensusSystem {
+    var nodes : [Node] := [];
+    
+    // Function to add a new node to the consensus system
+    public func addNode(id : Nat) : async {
+        nodes := nodes # [{id = id, value = 0, isReady = false}];
+    };
+    
+    // Function to set the value of a node
+    public func setValue(id : Nat, value : Nat) : async {
+        nodes := Array.map((n : Node) => {
+            if (n.id == id) {
+                {n with value = value, isReady = true};
+            } else {
+                n;
+            };
+        }, nodes);
+    };
+    
+    // Function to check if all nodes have set their values
+    private func allNodesReady() : Bool {
+        Array.foldl((n : Node, acc : Bool) => acc && n.isReady, true, nodes);
+    };
+    
+    // Function to calculate the consensus value
+    public query func calculateConsensus() : async Nat {
+        if (!allNodesReady()) {
+            // Not all nodes have set their values
+            return 0;
+        }
+        
+        // Sort nodes by their values
+        let sortedNodes = Array.sort((a : Node, b : Node) => a.value <= b.value, nodes);
+        
+        // Consensus value is the median of sorted values
+        let medianIndex = Array.length(sortedNodes) / 2;
+        sortedNodes[medianIndex].value;
+    };
+};
+
+// Entrypoint function
+public func main() : async () {
+    // Initialize the consensus system actor
+    let consensusSystem = actor ConsensusSystem();
+    
+    // Example usage: Add nodes and set values
+    await consensusSystem.addNode(1);
+    await consensusSystem.addNode(2);
+    await consensusSystem.addNode(3);
+    
+    await consensusSystem.setValue(1, 10);
+    await consensusSystem.setValue(2, 20);
+    await consensusSystem.setValue(3, 15);
+    
+    // Calculate and display the consensus value
+    let consensusValue = await consensusSystem.calculateConsensus();
+    Debug.print("Consensus Value: " # Nat.toText(consensusValue));
+};
